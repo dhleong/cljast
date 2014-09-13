@@ -35,11 +35,22 @@
 
 (deftest identify-test
   (let [foo (read-ast foo-java)]
-    (testing "Instance variable @ 8:9"
-      (is (= (identify foo 8 9)
+    (testing "Instance variable @ 8:8"
+      (is (= (identify foo 8 8)
              {:what type-var
               :type "net.dhleong.test.Magic"
               :name "m" })))
+
+    (testing "Method invocation @ 8:10"
+      (is (= (identify foo 8 10)
+             {:what type-method
+              :type "net.dhleong.test.Magic"
+              :returns "net.dhleong.test.Magic"
+              :name "get"
+              :args [] })))
+    ; TODO method invocation with args
+    ; TODO static field
+    ; TODO class literal
     ))
 
 (deftest get-suggestions-test

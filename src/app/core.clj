@@ -149,11 +149,38 @@
   "Get information about the AST node at a given position"
   [ast line col]
   (when-let [node (find-node ast line col) ]
-    ; TODO var? method decl? class literal?
-     {:what type-var
-      :name (.getIdentifier node)
-      :type (-> node .resolveTypeBinding .getQualifiedName)
-      }))
+    (let [parent (.getParent node)
+          method-invoke (= ASTNode/METHOD_INVOCATION (.getNodeType parent))
+          id (.getIdentifier node)]
+      (cond 
+        (and method-invoke (not= id (-> parent .getName .getIdentifier)))
+        ; TODO reuse extract-var?
+          {:what type-var
+           :name id
+           :type (-> node .resolveTypeBinding .getQualifiedName)
+           ; TODO javadoc
+           }
+
+        (and method-invoke (= id (-> parent .getName .getIdentifier)))
+          (let [m (.resolveMethodBinding parent)]
+          ; TODO reuse extract-method?
+            {:what type-method
+             :name id
+             :type (-> m .getDeclaringClass .getQualifiedName)
+             :returns (-> m .getReturnType .getQualifiedName)
+             :args (map identity (-> m .getParameterTypes))
+             ; TODO javadoc
+             })
+
+        :else
+          ; TODO method decl? class literal?
+          {:binding (class (.resolveTypeBinding node))
+           :pclass (class parent)
+           :ident (.getIdentifier node)
+           :parent (-> parent .getName .getIdentifier)
+           :invoke? method-invoke
+           }
+        ))))
 
 (defn get-errors
   "Get array of error message info from ast"
