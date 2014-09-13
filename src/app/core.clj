@@ -1,5 +1,5 @@
 (ns app.core
-  (import (org.eclipse.jdt.core.dom ASTParser AST ASTNode)
+  (import (org.eclipse.jdt.core.dom ASTParser AST ASTNode Modifier)
           (java.io File))
   (:require [clojure.string :as str]))
 
@@ -85,16 +85,17 @@
   {:what type-method
    :name (.getName method)
    :return (-> method .getReturnType .getQualifiedName)
-   :is-constructor (.isConstructor method)
+   :constructor (.isConstructor method)
    })
 
 (defn extract-var
   "Extract info from a variable
   into a map"
-  [method]
+  [obj]
   {:what type-var
-   :name (.getName method)
-   :type (-> method .getType .getQualifiedName)
+   :name (.getName obj)
+   :type (-> obj .getType .getQualifiedName)
+   :static (not= 0 (bit-and (.getModifiers obj) Modifier/STATIC))
    })
 
 (def suggest-handlers
@@ -107,12 +108,17 @@
            (map extract-method meths) 
            (map extract-var fields))
          )))
+   ; might not actually be anything else?
    })
 
 ;; ; for easy testing
 ;; (get-suggestions foo 8 16 )
 ;; (get-suggestions foo 12 30 )
-;; (find-node foo 12 30 )
+;; (get-suggestions foo 17 9 )
+;; (get-suggestions foo 21 12 )
+;; (-> (find-node foo 21 13) 
+;;     .getParent .getParent 
+;;     .getExpression .getLeftHandSide .getIdentifier)
 
 (defn handle-suggestion 
   "shortcut to picking and applying a handler for a node"
@@ -133,10 +139,13 @@
   "Get array of error message info from ast"
   [ast]
   (map (fn [obj]
-         {:text (.getMessage obj)
-          :start (.getStartPosition obj)
-          :length (.getLength obj)
-          }) 
+         (let [start-pos (.getStartPosition obj)]
+           {:text (.getMessage obj)
+            :pos start-pos
+            :line (.getLineNumber ast start-pos)
+            :col (.getColumnNumber ast start-pos)
+            :length (.getLength obj)
+            })) 
        (.getMessages ast)))
 
 (defn wrapper

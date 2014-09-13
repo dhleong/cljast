@@ -7,7 +7,7 @@ public class Magic {
 
     // intentionally an object so we can call methods on it
     public Integer doMagic() {
-        return MAGIC_NUMBER;
+        return Integer.valueOf(MAGIC_NUMBER);
     }
 
     public Magic get() {
@@ -15,5 +15,9 @@ public class Magic {
     }
 
     public void boring() {
+    }
+
+    public static Magic newInstance() {
+        return new Magic();
     }
 }

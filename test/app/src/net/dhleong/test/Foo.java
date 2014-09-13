@@ -11,4 +11,13 @@ public class Foo {
     void doBoringSuggestions() {
         new Magic().doMagic().;
     }
+
+    void doSimpleSuggestions() {
+        final Magic m = new Magic();
+        m.
+    }
+
+    void doStaticSuggestions() {
+        Magic.
+    }
 }
