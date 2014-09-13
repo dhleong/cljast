@@ -17,30 +17,44 @@
     (let [ast (read-ast foo-java)]
       (is ast))))
 
-(deftest magic-test
+(deftest get-errors-test
   (testing "Magic.java has no errors"
-    (is (empty? (get-errors (read-ast magic-java))))))
+    (is (empty? (get-errors (read-ast magic-java)))))
+  (testing "Foo.java has errors (for suggestions!)"
+    (is (seq (get-errors (read-ast foo-java))))))
 
-(deftest foo-test
+(deftest find-node-test
   (let [foo (read-ast foo-java)]
-    (testing "Foo.java has errors (for suggestions!)"
-      (is (seq (get-errors foo))))
     (testing "find-node 8 16 -> Magic#get() -> Magic"
       (let [node (find-node foo 8 16)]
         (is (not (nil? node)))
         (is (= ASTNode/EXPRESSION_STATEMENT (.getNodeType node)))
         (is (= "net.dhleong.test.Magic" 
                (-> node .getExpression .resolveTypeBinding .getQualifiedName)))))
+    ))
+
+(deftest identify-test
+  (let [foo (read-ast foo-java)]
+    (testing "Instance variable @ 8:9"
+      (is (= (identify foo 8 9)
+             {:what type-var
+              :type "net.dhleong.test.Magic"
+              :name "m" })))
+    ))
+
+(deftest get-suggestions-test
+  (let [foo (read-ast foo-java)]
     (testing "suggestions 17 9: simple")
-      ; TODO
+    ; TODO
     (testing "suggestions 12 30: constructor+method-chained")
-      ; TODO
+    ; TODO
     (testing "suggestions 8 16: method-chained")
-      ; TODO
+    ; TODO
     (testing "suggestions 21 13: static fields/methods"
       ; TODO
-      (let [s (get-suggestions foo 21 13)]
-        (is (not-empty s))))
+      ;; (let [s (get-suggestions foo 21 13)]
+      ;;   (is (not-empty s))))
+)
     ; TODO type suggestions, IE: `new M` -> `new Magic`
     ;       ideally with constructor overloads (this should be easiest part)
     ))

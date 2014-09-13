@@ -78,6 +78,16 @@
    (.accept ast visitor)
    @deepest))
 
+(defn find-expr
+  "Get the closest StatementExpression 
+  at the given line, col"
+  [ast line col]
+  (let [node (find-node ast line col)]
+    (loop [curr node]
+      (if (= ASTNode/EXPRESSION_STATEMENT (.getNodeType curr))
+        curr
+        (recur (.getParent curr))))))
+
 (defn extract-method
   "Extract info from a method
   into a map"
@@ -134,6 +144,16 @@
   [ast line col]
   (when-let [node (find-node ast line col)]
     (handle-suggestion node)))
+
+(defn identify
+  "Get information about the AST node at a given position"
+  [ast line col]
+  (when-let [node (find-node ast line col) ]
+    ; TODO var? method decl? class literal?
+     {:what type-var
+      :name (.getIdentifier node)
+      :type (-> node .resolveTypeBinding .getQualifiedName)
+      }))
 
 (defn get-errors
   "Get array of error message info from ast"
