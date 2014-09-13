@@ -3,6 +3,23 @@
           (java.io File))
   (:require [clojure.string :as str]))
 
+(def type-method "m")
+(def type-var "v")
+
+(def osx-java-core "/System/Library/Frameworks/JavaVM.framework/Classes/classes.jar")
+
+(defn detect-java-core
+  "Attempt to locate java core jar.
+  Returns a vector of jars (usually one)"
+  []
+  (let [java-home (System/getenv "JAVA_HOME")
+        java-home-jar (File. java-home "jre/lib/rt.jar")]
+    (cond 
+      (.exists java-home-jar)
+        [(.getAbsolutePath java-home-jar)]
+      (.exists (File. osx-java-core))
+        [osx-java-core])))
+
 (defn detect-environment
   "Detect the classpath and sourcepath
   for a given file"
@@ -12,7 +29,9 @@
         pathDir "test/app/src"
         unit (last parts)
         absPath (.getAbsolutePath (File. "test/app/src"))]
-    [nil [absPath] (str/join (drop-last 5 unit))]))
+    [(concat (detect-java-core)) ; TODO add other jars
+     [absPath]                   ; boring
+     (str/join (drop-last 5 unit))]))
 
 (defn create-ast
   "Create AST from args:
@@ -59,18 +78,41 @@
    (.accept ast visitor)
    @deepest))
 
+(defn extract-method
+  "Extract info from a method
+  into a map"
+  [method]
+  {:what type-method
+   :name (.getName method)
+   :return (-> method .getReturnType .getQualifiedName)
+   :is-constructor (.isConstructor method)
+   })
+
+(defn extract-var
+  "Extract info from a variable
+  into a map"
+  [method]
+  {:what type-var
+   :name (.getName method)
+   :type (-> method .getType .getQualifiedName)
+   })
+
 (def suggest-handlers
   {ASTNode/EXPRESSION_STATEMENT
    (fn [node]
      (when-let [bind (-> node .getExpression .resolveTypeBinding)]
        (let [meths (.getDeclaredMethods bind)
              fields (.getDeclaredFields bind)]
-         (conj (map identity meths) (map identity fields))
+         (concat 
+           (map extract-method meths) 
+           (map extract-var fields))
          )))
    })
 
 ;; ; for easy testing
 ;; (get-suggestions foo 8 16 )
+;; (get-suggestions foo 12 30 )
+;; (find-node foo 12 30 )
 
 (defn handle-suggestion 
   "shortcut to picking and applying a handler for a node"
@@ -79,7 +121,6 @@
     (if-let [handler (suggest-handlers (.getNodeType this-node))]
       (handler this-node)
       (when (not= ASTNode/BLOCK (.getNodeType this-node))
-        ;; (println this-node)
         (recur (.getParent this-node))))))
 
 (defn get-suggestions
@@ -99,7 +140,7 @@
        (.getMessages ast)))
 
 (defn wrapper
-  "wrapper"
+  "Wrap some code for testing in fireplace.vim"
   []
 
   (def src-path "test/app/src/net/dhleong/test/Foo.java")

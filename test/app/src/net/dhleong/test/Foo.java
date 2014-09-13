@@ -8,7 +8,7 @@ public class Foo {
         m.get(). // waiting for suggestions
     }
 
-    void foo() {
-        new Magic().boring();
+    void doBoringSuggestions() {
+        new Magic().doMagic().;
     }
 }
