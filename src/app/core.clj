@@ -26,11 +26,12 @@
   [path]
   (let [parts (.split path File/separator)
         ;; pathDir (str/join File/separator (drop-last parts))]
-        pathDir "test/app/src"
+        ; FIXME actually do this; ensure trailing slash!
+        pathDir "test/app/src/"
         unit (last parts)
-        absPath (.getAbsolutePath (File. "test/app/src"))]
+        absPath (.getAbsolutePath (File. "test/app/src/"))]
     [(concat (detect-java-core)) ; TODO add other jars
-     [absPath]                   ; boring
+     (map #(str % File/separator) [absPath])                   
      (str/join (drop-last 5 unit))]))
 
 (defn create-ast
@@ -115,18 +116,52 @@
    :static (not= 0 (bit-and (.getModifiers obj) Modifier/STATIC))
    })
 
-;; (defn extract-javadoc [node] (.getKind node))
-
 (defn read-ast-class
   "Given a fully-qualified name and an environment,
   attempt to read an ast"
-  )
+  [env fqn]
+  (let [fqn-file (str (.replace fqn "." "/" ) ".java")
+        candidates (map #(File. %1 %2) (:sp env) (repeat fqn-file))]
+    (when-let [match (.getAbsolutePath (first (filter #(.exists %) candidates)))]
+      (read-ast match))))
+
+(defn- extract-javadoc-internal-ast
+  "Given an ast env and a predicate, find
+  the node and get the javadoc"
+  [env pred]
+  (when-let [jd-obj (.getJavadoc (pred (:ast env)) )]
+    ; get a coll of all fragments in all tags
+    (let [tags (.tags jd-obj)
+          sections (map (fn [tag]
+                          (cons (.getTagName tag) (.fragments tag))
+                          ) tags)
+          flat (filter identity (flatten sections)) 
+          parts (map 
+                  (fn [el]
+                    (if (string? el)
+                      (str el " ") ; eg: "@return"
+                      (str (-> el .toString .trim) "\n"))) ; any TextElement
+                  flat)
+          ]
+      (.trim (str/join parts)))))
+ 
+      ;; (str/join  
+      ;;   (interpose 
+      ;;     "\n" ; separate each fragment with a newline
+      ;;     (map (fn [tag]
+      ;;            (if (= ASTNode/TEXT_ELEMENT (.getNodeType tag))
+      ;;              (.trim (.getText tag))
+      ;;              (str tag))) ; I guess just toString it?
+      ;;          sections))))))
 
 (defn- extract-javadoc-internal
   "Expects an ITypeBinding and a fn
-  to extract the node"
+  to extract the node. This is mostly a convenience
+  if you don't already have an ast instance"
   [env binder pred]
-  nil)
+  (extract-javadoc-internal-ast 
+    (read-ast-class env (.getQualifiedName binder)) 
+    pred))
 
 (defmulti extract-javadoc
   "Extract javadoc from a method, etc"
@@ -134,12 +169,8 @@
 (defmethod extract-javadoc IBinding/METHOD
   [env node]
   (let [binder (.getDeclaringClass node)
-        node-key (.getKey node)
-        pred (memfn findDeclaringNode node-key)]
-    ;; (.getQualifiedName declaring)
-    ;; declaring
-    (extract-javadoc-internal env binder pred)
-    ))
+        pred #(.findDeclaringNode % (.getKey node))]
+    (extract-javadoc-internal env binder pred)))
 ;; (defmethod extract-javadoc :default
 ;;   [node]
 ;;   (str "has" (= (.getKind node) IBinding/METHOD))
@@ -205,7 +236,7 @@
              :name id
              :type (-> m .getDeclaringClass .getQualifiedName)
              :returns (-> m .getReturnType .getQualifiedName)
-             :args (map identity (-> m .getParameterTypes))
+             :args (map #(.getQualifiedName %) (-> m .getParameterTypes))
              :javadoc (extract-javadoc env m)
              })
 

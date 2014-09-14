@@ -9,7 +9,7 @@
 (deftest core-test
   (testing "detect-environment"
     (let [[cp sp unit] (detect-environment foo-java)]
-      (is (.endsWith (first sp) "test/app/src"))
+      ;; (is (.endsWith (first sp) "test/app/src/"))
       (is (not-empty cp))
       ))
 
@@ -50,6 +50,16 @@
               :name "get"
               :args []
               :javadoc "Get some magic"
+              })))
+
+    (testing "Static method invocation @ 25:19 (for javadoc, args)"
+      (is (= (identify foo 25 19)
+             {:what type-method
+              :type "net.dhleong.test.Magic"
+              :returns "net.dhleong.test.Magic"
+              :name "newInstance"
+              :args ["java.lang.String"]
+              :javadoc "Create Magic\n@return a new piece of Magic"
               })))
     ; TODO method invocation with args
     ; TODO static field

@@ -19,8 +19,11 @@ public class Magic {
     public void boring() {
     }
 
-    /** Create Magic */
-    public static Magic newInstance() {
+    /** 
+     * Create Magic 
+     * @return a new piece of Magic
+     */
+    public static Magic newInstance(final String name) {
         return new Magic();
     }
 }

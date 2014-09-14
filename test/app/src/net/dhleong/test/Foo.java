@@ -20,4 +20,8 @@ public class Foo {
     void doStaticSuggestions() {
         Magic.
     }
+
+    void callStaticMethod() {
+        Magic.newInstance("elemental");
+    }
 }
