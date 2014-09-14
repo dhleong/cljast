@@ -61,7 +61,6 @@
               :args ["java.lang.String"]
               :javadoc "Create Magic\n@return a new piece of Magic"
               })))
-    ; TODO method invocation with args
     ; TODO static field
     ; TODO class literal
     ))
