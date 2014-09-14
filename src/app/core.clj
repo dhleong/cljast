@@ -145,15 +145,6 @@
           ]
       (.trim (str/join parts)))))
  
-      ;; (str/join  
-      ;;   (interpose 
-      ;;     "\n" ; separate each fragment with a newline
-      ;;     (map (fn [tag]
-      ;;            (if (= ASTNode/TEXT_ELEMENT (.getNodeType tag))
-      ;;              (.trim (.getText tag))
-      ;;              (str tag))) ; I guess just toString it?
-      ;;          sections))))))
-
 (defn- extract-javadoc-internal
   "Expects an ITypeBinding and a fn
   to extract the node. This is mostly a convenience
