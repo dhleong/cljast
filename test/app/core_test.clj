@@ -39,7 +39,8 @@
       (is (= (identify foo 8 8)
              {:what type-var
               :type "net.dhleong.test.Magic"
-              :name "m" })))
+              :name "m"
+              })))
 
     (testing "Method invocation @ 8:10"
       (is (= (identify foo 8 10)
@@ -47,7 +48,9 @@
               :type "net.dhleong.test.Magic"
               :returns "net.dhleong.test.Magic"
               :name "get"
-              :args [] })))
+              :args []
+              :javadoc "Get some magic"
+              })))
     ; TODO method invocation with args
     ; TODO static field
     ; TODO class literal

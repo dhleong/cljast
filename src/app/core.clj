@@ -1,5 +1,5 @@
 (ns app.core
-  (import (org.eclipse.jdt.core.dom ASTParser AST ASTNode Modifier)
+  (import (org.eclipse.jdt.core.dom ASTParser ASTNode IBinding Modifier)
           (java.io File))
   (:require [clojure.string :as str]))
 
@@ -37,6 +37,11 @@
   "Create AST from args:
   :text Text contents of file
   :path Path to the file
+
+  Returns a Map:
+    :ast CompilationUnit instance
+    :cp vector of classpath locations
+    :sp vector of sourcepath locations
   "
   [& {:keys [text path]}]
   (let [parser (ASTParser/newParser(AST/JLS4))
@@ -49,11 +54,12 @@
       (.setEnvironment acp asp nil false)
       (.setUnitName unit)
       (.setResolveBindings true))
-    (.createAST parser nil)
-    ))
+    {:ast (.createAST parser nil)
+     :cp cp
+     :sp sp}))
 
 (defn read-ast
-  "Read an AST from a file"
+  "Read an AST from a file. See create-ast"
   [path]
   (when-let [text (slurp path)]
     (create-ast :text text :path path)))
@@ -61,8 +67,9 @@
 (defn find-node
   "Search for an expression in the AST
   at the given line, col"
-  [ast line col]
-  (let [pos (.getPosition ast line col)
+  [env line col]
+  (let [ast (:ast env)
+        pos (.getPosition ast line col)
         deepest (ref nil)
         visitor 
           (proxy [org.eclipse.jdt.core.dom.ASTVisitor] []
@@ -81,8 +88,8 @@
 (defn find-expr
   "Get the closest StatementExpression 
   at the given line, col"
-  [ast line col]
-  (let [node (find-node ast line col)]
+  [env line col]
+  (let [node (find-node env line col)]
     (loop [curr node]
       (if (= ASTNode/EXPRESSION_STATEMENT (.getNodeType curr))
         curr
@@ -107,6 +114,36 @@
    :type (-> obj .getType .getQualifiedName)
    :static (not= 0 (bit-and (.getModifiers obj) Modifier/STATIC))
    })
+
+;; (defn extract-javadoc [node] (.getKind node))
+
+(defn read-ast-class
+  "Given a fully-qualified name and an environment,
+  attempt to read an ast"
+  )
+
+(defn- extract-javadoc-internal
+  "Expects an ITypeBinding and a fn
+  to extract the node"
+  [env binder pred]
+  nil)
+
+(defmulti extract-javadoc
+  "Extract javadoc from a method, etc"
+  (fn [env node] (.getKind node)))
+(defmethod extract-javadoc IBinding/METHOD
+  [env node]
+  (let [binder (.getDeclaringClass node)
+        node-key (.getKey node)
+        pred (memfn findDeclaringNode node-key)]
+    ;; (.getQualifiedName declaring)
+    ;; declaring
+    (extract-javadoc-internal env binder pred)
+    ))
+;; (defmethod extract-javadoc :default
+;;   [node]
+;;   (str "has" (= (.getKind node) IBinding/METHOD))
+;;   )
 
 (def suggest-handlers
   {ASTNode/EXPRESSION_STATEMENT
@@ -141,14 +178,14 @@
 
 (defn get-suggestions
   "Get suggestions at a position, given an AST"
-  [ast line col]
-  (when-let [node (find-node ast line col)]
+  [env line col]
+  (when-let [node (find-node env line col)]
     (handle-suggestion node)))
 
 (defn identify
   "Get information about the AST node at a given position"
-  [ast line col]
-  (when-let [node (find-node ast line col) ]
+  [env line col]
+  (when-let [node (find-node env line col) ]
     (let [parent (.getParent node)
           method-invoke (= ASTNode/METHOD_INVOCATION (.getNodeType parent))
           id (.getIdentifier node)]
@@ -169,7 +206,7 @@
              :type (-> m .getDeclaringClass .getQualifiedName)
              :returns (-> m .getReturnType .getQualifiedName)
              :args (map identity (-> m .getParameterTypes))
-             ; TODO javadoc
+             :javadoc (extract-javadoc env m)
              })
 
         :else
@@ -184,16 +221,17 @@
 
 (defn get-errors
   "Get array of error message info from ast"
-  [ast]
+  [env]
   (map (fn [obj]
-         (let [start-pos (.getStartPosition obj)]
+         (let [ast (:ast env)
+               start-pos (.getStartPosition obj)]
            {:text (.getMessage obj)
             :pos start-pos
             :line (.getLineNumber ast start-pos)
             :col (.getColumnNumber ast start-pos)
             :length (.getLength obj)
             })) 
-       (.getMessages ast)))
+       (.getMessages (:ast env))))
 
 (defn wrapper
   "Wrap some code for testing in fireplace.vim"
