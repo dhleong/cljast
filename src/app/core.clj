@@ -43,23 +43,23 @@
 
 (defn create-ast
   "Create AST from args:
-  :text Text contents of file
-  :path Path to the file
-  :jdk Any of :jdk5 :jdk6 :jdk7 (defaults to :jdk7)
-
+    :text Text contents of file
+    :path Path to the file
+    :with Specify JDK level to parse with; 
+          any of :jdk5 :jdk6 :jdk7 (defaults to :jdk7)
   Returns a Map:
     :ast CompilationUnit instance
     :cp vector of classpath locations
     :sp vector of sourcepath locations
   "
-  [& {:keys [text path jdk]}]
+  [& {:keys [text path with]}]
   (let [parser (ASTParser/newParser(AST/JLS4))
         [cp sp unit] (detect-environment path)
         acp (into-array java.lang.String cp)
         asp (into-array java.lang.String sp)
         opts (JavaCore/getOptions)]
-    (if jdk
-      (JavaCore/setComplianceOptions (jdk jdk-option-map) opts)
+    (if with
+      (JavaCore/setComplianceOptions (with jdk-option-map) opts)
       (JavaCore/setComplianceOptions (:jdk7 jdk-option-map) opts))
     (doto parser
       (.setCompilerOptions opts)
@@ -76,7 +76,7 @@
   "Read an AST from a file. See create-ast"
   [path & opts]
   (when-let [text (slurp path)]
-    (create-ast :text text :path path)))
+    (apply create-ast :text text :path path opts)))
 
 (defn find-node
   "Search for an expression in the AST
