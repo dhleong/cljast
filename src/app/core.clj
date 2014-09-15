@@ -1,5 +1,6 @@
 (ns app.core
   (import (org.eclipse.jdt.core.dom ASTParser ASTNode IBinding Modifier)
+          (org.eclipse.jdt.core JavaCore)
           (java.io File))
   (:require [clojure.string :as str]))
 
@@ -7,6 +8,12 @@
 (def type-var "v")
 
 (def osx-java-core "/System/Library/Frameworks/JavaVM.framework/Classes/classes.jar")
+
+(def jdk-option-map 
+  {:jdk5 JavaCore/VERSION_1_5
+   :jdk6 JavaCore/VERSION_1_6
+   :jdk7 JavaCore/VERSION_1_7
+   })
 
 (defn detect-java-core
   "Attempt to locate java core jar.
@@ -38,18 +45,24 @@
   "Create AST from args:
   :text Text contents of file
   :path Path to the file
+  :jdk Any of :jdk5 :jdk6 :jdk7 (defaults to :jdk7)
 
   Returns a Map:
     :ast CompilationUnit instance
     :cp vector of classpath locations
     :sp vector of sourcepath locations
   "
-  [& {:keys [text path]}]
+  [& {:keys [text path jdk]}]
   (let [parser (ASTParser/newParser(AST/JLS4))
         [cp sp unit] (detect-environment path)
         acp (into-array java.lang.String cp)
-        asp (into-array java.lang.String sp)]
+        asp (into-array java.lang.String sp)
+        opts (JavaCore/getOptions)]
+    (if jdk
+      (JavaCore/setComplianceOptions (jdk jdk-option-map) opts)
+      (JavaCore/setComplianceOptions (:jdk7 jdk-option-map) opts))
     (doto parser
+      (.setCompilerOptions opts)
       (.setSource (.toCharArray text))
       (.setStatementsRecovery true)
       (.setEnvironment acp asp nil false)
@@ -61,7 +74,7 @@
 
 (defn read-ast
   "Read an AST from a file. See create-ast"
-  [path]
+  [path & opts]
   (when-let [text (slurp path)]
     (create-ast :text text :path path)))
 

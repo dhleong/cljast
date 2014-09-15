@@ -23,5 +23,7 @@ public class Foo {
 
     void callStaticMethod() {
         Magic.newInstance("elemental");
+
+        new ArrayList<Magic>();
     }
 }
