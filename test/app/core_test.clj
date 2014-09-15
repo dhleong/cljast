@@ -62,6 +62,15 @@
               :args ["java.lang.String"]
               :javadoc "Create Magic\n@return a new piece of Magic"
               })))
+
+    (testing "Static field at 31 27"
+      (is (= (identify foo 31 27)
+             {:what type-var
+              :type "int"
+              :name "MAGIC_NUMBER"
+              :javadoc "So full of magic"
+              ; TODO const value?
+              })))
     ; TODO static field
     ; TODO class literal
     ))

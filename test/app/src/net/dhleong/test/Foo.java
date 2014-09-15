@@ -26,4 +26,8 @@ public class Foo {
 
         new ArrayList<Magic>();
     }
+
+    void getStaticField() {
+        int magic = Magic.MAGIC_NUMBER;
+    }
 }

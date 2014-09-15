@@ -3,6 +3,7 @@ package net.dhleong.test;
 
 public class Magic {
 
+    /** So full of magic */
     static final int MAGIC_NUMBER = 42;
 
     // intentionally an object so we can call methods on it

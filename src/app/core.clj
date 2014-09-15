@@ -1,5 +1,5 @@
 (ns app.core
-  (import (org.eclipse.jdt.core.dom ASTParser ASTNode IBinding Modifier)
+  (import (org.eclipse.jdt.core.dom AST ASTParser ASTNode IBinding Modifier)
           (org.eclipse.jdt.core JavaCore)
           (java.io File))
   (:require [clojure.string :as str]))
@@ -168,11 +168,19 @@
 
 (defmulti extract-javadoc
   "Extract javadoc from a method, etc"
-  (fn [env node] (.getKind node)))
+  (fn [env node _] 
+    {:pre [(instance? IBinding node)]}
+    (.getKind node)))
 (defmethod extract-javadoc IBinding/METHOD
-  [env node]
+  [env node _]
   (let [binder (.getDeclaringClass node)
         pred #(.findDeclaringNode % (.getKey node))]
+    (extract-javadoc-internal env binder pred)))
+(defmethod extract-javadoc IBinding/VARIABLE
+  [env node decl]
+  (let [binder (.getDeclaringClass node)
+        pred #(.findDeclaringNode % (.getKey node))]
+    ;; (println (.getVariableDeclaration node) decl)
     (extract-javadoc-internal env binder pred)))
 ;; (defmethod extract-javadoc :default
 ;;   [node]
@@ -216,6 +224,17 @@
   (when-let [node (find-node env line col)]
     (handle-suggestion node)))
 
+(defn- identify-var
+  ; Hopefully merge with extract-var somehow
+  [env node id]
+  (let [type-binding (.resolveTypeBinding node)] 
+    {:what type-var
+     :name id
+     :type (-> type-binding .getQualifiedName)
+     :javadoc (extract-javadoc env (.resolveBinding node) type-binding)
+     ;; :value (.resolveConstantExpressionValue node) ; TODO
+     }))
+
 (defn identify
   "Get information about the AST node at a given position"
   [env line col]
@@ -225,12 +244,7 @@
           id (.getIdentifier node)]
       (cond 
         (and method-invoke (not= id (-> parent .getName .getIdentifier)))
-        ; TODO reuse extract-var?
-          {:what type-var
-           :name id
-           :type (-> node .resolveTypeBinding .getQualifiedName)
-           ; TODO javadoc
-           }
+          (identify-var env node id)
 
         (and method-invoke (= id (-> parent .getName .getIdentifier)))
           (let [m (.resolveMethodBinding parent)]
@@ -240,13 +254,18 @@
              :type (-> m .getDeclaringClass .getQualifiedName)
              :returns (-> m .getReturnType .getQualifiedName)
              :args (map #(.getQualifiedName %) (-> m .getParameterTypes))
-             :javadoc (extract-javadoc env m)
+             :javadoc (extract-javadoc env m nil)
              })
+
+        (= ASTNode/QUALIFIED_NAME (.getNodeType parent))
+          (identify-var env parent id)
 
         :else
           ; TODO method decl? class literal?
           {:binding (class (.resolveTypeBinding node))
            :pclass (class parent)
+           ;; :qualifier (.resolveBinding parent)
+           :class (class node)
            :ident (.getIdentifier node)
            :parent (-> parent .getName .getIdentifier)
            :invoke? method-invoke
