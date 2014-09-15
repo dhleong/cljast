@@ -268,6 +268,15 @@
             })) 
        (.getMessages (:ast env))))
 
+(defn get-missing-imports
+  "Get array of missing imports from ast; another function can recommend..."
+  [env]
+  (when-let [relevant (filter #(.endsWith 
+                                 (:text %) 
+                                 "cannot be resolved to a type") 
+                              (get-errors env))]
+    (map #(first (str/split (:text %) #" ")) relevant)))
+
 (defn wrapper
   "Wrap some code for testing in fireplace.vim"
   []

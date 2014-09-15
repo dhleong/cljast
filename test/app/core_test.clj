@@ -82,5 +82,13 @@
     ;       ideally with constructor overloads (this should be easiest part)
     ))
 
+(deftest get-missing-imports-test
+  (let [foo (read-ast foo-java)]
+    (testing "ArrayList is missing"
+      (is (= ["ArrayList"] (get-missing-imports foo))))))
+
+(deftest get-unused-imports-test
+  ; TODO 
+  )
 
 ;; (clojure.test/run-tests)
