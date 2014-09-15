@@ -41,6 +41,7 @@
              {:what type-var
               :type "net.dhleong.test.Magic"
               :name "m"
+              :javadoc nil
               })))
 
     (testing "Method invocation @ 8:10"
@@ -102,4 +103,4 @@
     (testing "LinkedList is unused")
       (is (= ["java.util.LinkedList"] (get-unused-imports bar)))))
 
-;; (clojure.test/run-tests)
+(clojure.test/run-tests)

@@ -147,7 +147,7 @@
           sections (map (fn [tag]
                           (cons (.getTagName tag) (.fragments tag))
                           ) tags)
-          flat (filter identity (flatten sections)) 
+          flat (filter identity (flatten sections)) ; non-nil plz
           parts (map 
                   (fn [el]
                     (if (string? el)
@@ -162,26 +162,27 @@
   to extract the node. This is mostly a convenience
   if you don't already have an ast instance"
   [env binder pred]
+  {:pre [(identity binder)]} ; nil check
   (extract-javadoc-internal-ast 
     (read-ast-class env (.getQualifiedName binder)) 
     pred))
 
 (defmulti extract-javadoc
   "Extract javadoc from a method, etc"
-  (fn [env node _] 
+  (fn [env node] 
     {:pre [(instance? IBinding node)]}
     (.getKind node)))
 (defmethod extract-javadoc IBinding/METHOD
-  [env node _]
+  [env node]
   (let [binder (.getDeclaringClass node)
         pred #(.findDeclaringNode % (.getKey node))]
     (extract-javadoc-internal env binder pred)))
 (defmethod extract-javadoc IBinding/VARIABLE
-  [env node decl]
-  (let [binder (.getDeclaringClass node)
-        pred #(.findDeclaringNode % (.getKey node))]
-    ;; (println (.getVariableDeclaration node) decl)
-    (extract-javadoc-internal env binder pred)))
+  [env node]
+  (when (.isField node)
+    (let [binder (.getDeclaringClass node)
+          pred #(.getParent (.findDeclaringNode % (.getKey node)))]
+      (extract-javadoc-internal env binder pred))))
 ;; (defmethod extract-javadoc :default
 ;;   [node]
 ;;   (str "has" (= (.getKind node) IBinding/METHOD))
@@ -227,13 +228,12 @@
 (defn- identify-var
   ; Hopefully merge with extract-var somehow
   [env node id]
-  (let [type-binding (.resolveTypeBinding node)] 
-    {:what type-var
-     :name id
-     :type (-> type-binding .getQualifiedName)
-     :javadoc (extract-javadoc env (.resolveBinding node) type-binding)
-     ;; :value (.resolveConstantExpressionValue node) ; TODO
-     }))
+  {:what type-var
+   :name id
+   :type (-> node .resolveTypeBinding .getQualifiedName)
+   :javadoc (extract-javadoc env (.resolveBinding node))
+   ;; :value (.resolveConstantExpressionValue node) ; TODO
+   })
 
 (defn identify
   "Get information about the AST node at a given position"
@@ -254,7 +254,7 @@
              :type (-> m .getDeclaringClass .getQualifiedName)
              :returns (-> m .getReturnType .getQualifiedName)
              :args (map #(.getQualifiedName %) (-> m .getParameterTypes))
-             :javadoc (extract-javadoc env m nil)
+             :javadoc (extract-javadoc env m)
              })
 
         (= ASTNode/QUALIFIED_NAME (.getNodeType parent))
