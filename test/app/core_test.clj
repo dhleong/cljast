@@ -9,7 +9,7 @@
 (deftest core-test
   (testing "detect-environment"
     (let [[cp sp unit] (detect-environment foo-java)]
-      ;; (is (.endsWith (first sp) "test/app/src/"))
+      (is (.endsWith (first sp) "test/app/src/"))
       (is (not-empty cp))
       ))
 
