@@ -277,6 +277,15 @@
                               (get-errors env))]
     (map #(first (str/split (:text %) #" ")) relevant)))
 
+(defn get-unused-imports
+  "Get array of unused imports from ast"
+  [env]
+  (when-let [relevant (map #(re-matches
+                                 #"The import (.*) is never used"
+                                 (:text %)) 
+                              (get-errors env))]
+    (map second (filter identity relevant))))
+
 (defn wrapper
   "Wrap some code for testing in fireplace.vim"
   []

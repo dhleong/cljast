@@ -1,6 +1,6 @@
 
 package net.dhleong.test;
-import java.util.LinkedList;
+
 public class Foo {
 
     public void doMagicSuggestions() {

@@ -5,6 +5,7 @@
 
 (def foo-java "test/app/src/net/dhleong/test/Foo.java")
 (def magic-java "test/app/src/net/dhleong/test/Magic.java")
+(def bar-java "test/app/src/net/dhleong/test/bars/Bar.java")
 
 (deftest core-test
   (testing "detect-environment"
@@ -88,7 +89,8 @@
       (is (= ["ArrayList"] (get-missing-imports foo))))))
 
 (deftest get-unused-imports-test
-  ; TODO 
-  )
+  (let [bar (read-ast bar-java)]
+    (testing "LinkedList is unused")
+      (is (= ["java.util.LinkedList"] (get-unused-imports bar)))))
 
 ;; (clojure.test/run-tests)
