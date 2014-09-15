@@ -8,10 +8,15 @@
 (def bar-java "test/app/src/net/dhleong/test/bars/Bar.java")
 
 (deftest core-test
+  (testing "detect-source-dirs"
+    (is (= ["test/app/src"] (detect-source-dirs "test/app"))))
+
   (testing "detect-environment"
-    (let [[cp sp unit] (detect-environment foo-java)]
-      (is (.endsWith (first sp) "test/app/src/"))
+    (let [[cp sp unit] (detect-environment foo-java)
+          expected "test/app/src/"]
       (is (not-empty cp))
+      (is (= (str (take-last (.length expected) (first sp)) expected)))
+      (is (= unit "Foo"))
       ))
 
   (testing "read-ast works"
@@ -72,8 +77,9 @@
               :javadoc "So full of magic"
               ; TODO const value?
               })))
-    ; TODO static field
+    
     ; TODO class literal
+    ; TODO constructor
     ))
 
 (deftest get-suggestions-test

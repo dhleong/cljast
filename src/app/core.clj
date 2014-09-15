@@ -15,6 +15,10 @@
    :jdk7 JavaCore/VERSION_1_7
    })
 
+(def java-source-dir-candidates
+  "Places to look for src files in a project root"
+  ["/src" "/src/main/java" "/src/debug/java"])
+
 (defn detect-java-core
   "Attempt to locate java core jar.
   Returns a vector of jars (usually one)"
@@ -27,18 +31,34 @@
       (.exists (File. osx-java-core))
         [osx-java-core])))
 
+(defn detect-project-root
+  "Detect project root given a File"
+  [file]
+  (let [abs (.getAbsolutePath file)
+        parts (str/split abs (re-pattern File/separator))
+        src-index (.indexOf parts "src")
+        root-parts (take src-index parts)]
+    (str/join File/separator root-parts)))
+
+(defn detect-source-dirs
+  "Given a project root, return possible source dirs"
+  [project-root]
+  (let [found (filter #(.exists (File. %))
+                      (map #(str project-root %) 
+                           java-source-dir-candidates))
+        search []] ; TODO find any ref'd projects w/source
+    (concat found (map detect-source-dirs search)))) ; recurse
+
 (defn detect-environment
   "Detect the classpath and sourcepath
   for a given file"
   [path]
-  (let [parts (.split path File/separator)
-        ;; pathDir (str/join File/separator (drop-last parts))]
-        ; FIXME actually do this; ensure trailing slash!
-        pathDir "test/app/src/"
-        unit (last parts)
-        absPath (.getAbsolutePath (File. "test/app/src/"))]
+  (let [file (File. path)
+        unit (.getName file)
+        root (detect-project-root file)
+        srcs (detect-source-dirs root)]
     [(concat (detect-java-core)) ; TODO add other jars
-     (map #(str % File/separator) [absPath])                   
+     (map #(str % File/separator) srcs)
      (str/join (drop-last 5 unit))]))
 
 (defn create-ast
@@ -200,15 +220,6 @@
          )))
    ; might not actually be anything else?
    })
-
-;; ; for easy testing
-;; (get-suggestions foo 8 16 )
-;; (get-suggestions foo 12 30 )
-;; (get-suggestions foo 17 9 )
-;; (get-suggestions foo 21 12 )
-;; (-> (find-node foo 21 13) 
-;;     .getParent .getParent 
-;;     .getExpression .getLeftHandSide .getIdentifier)
 
 (defn handle-suggestion 
   "shortcut to picking and applying a handler for a node"
