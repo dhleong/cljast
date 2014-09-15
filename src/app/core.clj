@@ -52,15 +52,14 @@
     :cp vector of classpath locations
     :sp vector of sourcepath locations
   "
-  [& {:keys [text path with]}]
+  [& {:keys [text path with]
+      :or {with :jdk7}}]
   (let [parser (ASTParser/newParser(AST/JLS4))
         [cp sp unit] (detect-environment path)
         acp (into-array java.lang.String cp)
         asp (into-array java.lang.String sp)
         opts (JavaCore/getOptions)]
-    (if with
-      (JavaCore/setComplianceOptions (with jdk-option-map) opts)
-      (JavaCore/setComplianceOptions (:jdk7 jdk-option-map) opts))
+    (JavaCore/setComplianceOptions (with jdk-option-map) opts)
     (doto parser
       (.setCompilerOptions opts)
       (.setSource (.toCharArray text))
