@@ -26,11 +26,23 @@
 (defn gradle-project
   "Load an EclipseProject instance from Gradle"
   [& args]
-  (let [proj-conn (apply gradle-connection args)]
-    (try
-      (.getModel proj-conn EclipseProject)
-      (finally (.close proj-conn))
-      )))
+  (with-gradle args 
+    (.getModel proj-conn EclipseProject)))
+
+(defmacro with-gradle
+  "Open a gradle project connection, binding to proj-conn
+  by default (you can add `:as name` to your args to customize),
+  execute the statements, and close the connection when done"
+  [gradle-args & body]
+  (let [args-map (apply assoc {} (drop 1 gradle-args))
+        var-name (get args-map :as 'proj-conn)
+        pass-args (if (contains? args-map :as)
+                    (drop-last 2 gradle-args)
+                    gradle-args)]
+    (list 'let [var-name (list 'apply 'gradle-connection (vec pass-args))]
+          (list 'try
+            (cons 'do body)
+            (list 'finally (list '.close var-name))))))
 
 (defn get-dependencies 
   "List dependency files for an EclipseProject"
