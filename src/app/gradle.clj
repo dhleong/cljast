@@ -39,10 +39,10 @@
         pass-args (if (contains? args-map :as)
                     (drop-last 2 gradle-args)
                     gradle-args)]
-    (list 'let [var-name (list 'apply 'gradle-connection (vec pass-args))]
-          (list 'try
-            (cons 'do body)
-            (list 'finally (list '.close var-name))))))
+    `(let [~var-name (apply gradle-connection ~(vec pass-args))]
+       (try
+         (do ~body)
+         (finally (.close ~var-name))))))
 
 (defn get-dependencies 
   "List dependency files for an EclipseProject"
