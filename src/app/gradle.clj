@@ -5,12 +5,13 @@
           (org.gradle.tooling.model.idea IdeaProject)
           (java.io ByteArrayOutputStream) 
           (java.net URI))
-  (:require [clojure.java.io :refer [file]]))
+  (:require [clojure.string :as str]
+            [clojure.java.io :refer [file]]))
 
 (defn- gradle-connection
   [project & {:keys [version installation home distro]}]
-  {:pre [(not (nil? project))]}
-
+  {:pre [(not (nil? project))
+         (.exists (file project))]}
   (let [conn (.. GradleConnector
                  (newConnector)
                  (forProjectDirectory (file project)))]
@@ -35,7 +36,7 @@
         var-name (get args-map :as 'proj-conn)]
     `(let [~var-name (apply gradle-connection ~gradle-args)]
        (try
-         (do ~body)
+         ~(cons 'do body)
          (finally (.close ~var-name))))))
 
 (defn gradle-project
@@ -45,7 +46,9 @@
     (.getModel proj-conn EclipseProject)))
 
 (defn gradle-list-dependencies
-  "Wacky way of listing dependencies"
+  "Wacky way of listing dependencies by parsing the 
+  'dependencies' task output. Does not include projects,
+  but *does* include transitive dependencies from them"
   [& args]
   (let [out (ByteArrayOutputStream.)] 
     (with-gradle args
@@ -55,7 +58,23 @@
           (setStandardOutput out)
           (run)
           ))
-    (.toString out)))
+    (->> (.toString out)
+         (#(str/split % #"\n\n")) ; wacky; split by double newline
+         (filter #(.startsWith % "compile")) ; only compile deps
+         (first)                            ; first (only?) string
+         (#(str/split % #"\n"))             ; split by lines
+         (drop 1)                           ; drop header line
+         (filter #(= -1 (.indexOf % "- project "))) ; no projects, please
+         (map (fn [raw] 
+                (->> raw 
+                    (#(str/split % #"--- ")) ; split of human-
+                    (second)                 ; -friendly grabage
+                    (#(str/split % #":"))    ; separate ID
+                    ((fn [[group artifact version]] ; destructure
+                       {:group group                ; ... and map
+                        :artifact artifact
+                        :version (last (str/split version #" -> "))
+                        }))))))))
  
 
 (defn get-dependencies 
