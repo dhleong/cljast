@@ -1,4 +1,4 @@
-(defproject app "0.1.0-SNAPSHOT"
+(defproject cljast "0.1.0-SNAPSHOT"
   :description "Clojure AST parsing and suggestions server"
   :url "http://github.com/dhleong/cljast"
   :license {:name "Eclipse Public License"

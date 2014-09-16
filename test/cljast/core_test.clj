@@ -1,30 +1,30 @@
-(ns app.core-test
+(ns cljast.core-test
   (import (org.eclipse.jdt.core.dom AST ASTNode))
   (:require [clojure.test :refer :all]
-            [app.core :refer :all]))
+            [cljast.core :refer :all]))
 
-(def foo-java "test/app/src/net/dhleong/test/Foo.java")
-(def magic-java "test/app/src/net/dhleong/test/Magic.java")
-(def bar-java "test/app/src/net/dhleong/test/bars/Bar.java")
+(def foo-java "test/cljast/src/net/dhleong/test/Foo.java")
+(def magic-java "test/cljast/src/net/dhleong/test/Magic.java")
+(def bar-java "test/cljast/src/net/dhleong/test/bars/Bar.java")
 
 (deftest core-test
   (testing "detect-source-dirs"
-    (is (= ["test/app/src"] (detect-source-dirs "test/app"))))
+    (is (= ["test/cljast/src"] (detect-source-dirs "test/cljast"))))
 
   (testing "detect-source-dirs with project.properties"
-    (is (= ["test/app/dependency/src/main/java"] 
-           (detect-source-dirs "test/app/dependency")
+    (is (= ["test/cljast/dependency/src/main/java"] 
+           (detect-source-dirs "test/cljast/dependency")
            ))
     )
     ; TODO test project.properties
 
   (testing "detect-environment"
     (let [[cp sp unit root] (detect-environment foo-java)
-          expected "test/app/src/"]
+          expected "test/cljast/src/"]
       (is (not-empty cp))
       (is (= (apply str (take-last (.length expected) (first sp))) expected))
       (is (= unit "Foo"))
-      (is (= (apply str (take-last 8 root)) "test/app"))
+      (is (= (apply str (take-last 11 root)) "test/cljast"))
       ))
 
   (testing "read-ast works"

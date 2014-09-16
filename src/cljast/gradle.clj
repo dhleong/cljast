@@ -1,4 +1,4 @@
-(ns app.gradle
+(ns cljast.gradle
   (import (org.gradle.tooling GradleConnector)
           (org.gradle.tooling.model GradleProject)
           (org.gradle.tooling.model.eclipse EclipseProject)

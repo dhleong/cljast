@@ -1,4 +1,4 @@
-(ns app.core
+(ns cljast.core
   (import (org.eclipse.jdt.core.dom AST ASTParser ASTNode IBinding Modifier)
           (org.eclipse.jdt.core JavaCore)
           (java.io File))
