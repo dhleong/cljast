@@ -19,7 +19,14 @@
 
 (def java-source-dir-candidates
   "Places to look for src files in a project root"
-  ["src" "src/main/java" "src/debug/java"])
+  ["src/main/java" "src/release/java"])
+
+(defn- java-source-dir-fallback
+  [root coll]
+  (let [fallback (file root "src")]
+    (if (and (empty? coll) (.exists fallback))
+      [fallback]
+      coll)))
 
 (defn detect-java-core
   "Attempt to locate java core jar.
@@ -61,7 +68,8 @@
   [project-root]
   (let [found (->> java-source-dir-candidates
                    (map #(file project-root %))
-                   (filter #(.exists %)))
+                   (filter #(.exists %))
+                   (java-source-dir-fallback project-root))
         search (detect-depended-projects project-root)] 
     (->> found
          (concat (map detect-source-dirs search)) ; recurse

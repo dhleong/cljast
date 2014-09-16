@@ -11,6 +11,13 @@
   (testing "detect-source-dirs"
     (is (= ["test/app/src"] (detect-source-dirs "test/app"))))
 
+  (testing "detect-source-dirs with project.properties"
+    (is (= ["test/app/dependency/src/main/java"] 
+           (detect-source-dirs "test/app/dependency")
+           ))
+    )
+    ; TODO test project.properties
+
   (testing "detect-environment"
     (let [[cp sp unit root] (detect-environment foo-java)
           expected "test/app/src/"]
