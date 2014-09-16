@@ -85,6 +85,7 @@
         unit (.getName file)
         root (detect-project-root file)
         srcs (detect-source-dirs root)]
+    ; TODO if android, try adding source, then fallback to .jar
     [(concat (detect-java-core)) ; TODO add other jars
      (map #(str % File/separator) srcs)
      (str/join (drop-last 5 unit))
