@@ -5,7 +5,8 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [org.eclipse.jdt/org.eclipse.jdt.core "3.7.1"]
-                 ])
+                 [org.gradle/gradle-tooling-api "1.11"] ]
+  :repositories {"gradle-libs" "http://repo.gradle.org/gradle/libs-releases-local"})
 
                  ;; [org.eclipse.core/contenttype "3.4.200"]
                  ;; [org.eclipse.core/jobs "3.5.300"]

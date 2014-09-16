@@ -117,4 +117,4 @@
     (testing "LinkedList is unused")
       (is (= ["java.util.LinkedList"] (get-unused-imports bar)))))
 
-(clojure.test/run-tests)
+;; (clojure.test/run-tests)
