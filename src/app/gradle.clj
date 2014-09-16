@@ -3,10 +3,13 @@
           (org.gradle.tooling.model GradleProject)
           (org.gradle.tooling.model.eclipse EclipseProject)
           (org.gradle.tooling.model.idea IdeaProject)
-          (java.io ByteArrayOutputStream) 
+          (java.io ByteArrayOutputStream File)
           (java.net URI))
   (:require [clojure.string :as str]
             [clojure.java.io :refer [file]]))
+
+(def gradle-cp-task "\ntask _cljast_cp << { println configurations.compile.asPath }")
+(def gradle-cp-task-name "_cljast_cp")
 
 (defn- gradle-connection
   [project & {:keys [version installation home distro]}]
@@ -75,7 +78,45 @@
                         :artifact artifact
                         :version (last (str/split version #" -> "))
                         }))))))))
+
+(defn gradle-classpath
+  "Moar wackiness. Backup the default build.gradle and
+  append an extra task that dumps the classpath, then
+  parse the output of that task."
+  [& args]
+  (let [root-dir (first args)
+        root-file (file root-dir "build.gradle")
+        root-text (slurp root-file)
+        bak-file (file (str root-file ".bak"))
+        raw-bytes (ByteArrayOutputStream.)] ; get ready
+    ; insert our task into the gradle file (yuck, but
+    ; it doesn't parse settings correctly if we specify
+    ; an alternative build file...)
+    (when (= -1 (.lastIndexOf root-text gradle-cp-task-name))
+      (spit bak-file root-text) ;; save a backup
+      (spit root-file gradle-cp-task :append true)) ; write the task
+    ; now, process!
+    (with-gradle args
+      (.. proj-conn
+          (newBuild)
+          (withArguments (into-array ["-q"])) ; quiet, please
+          (forTasks (into-array [gradle-cp-task-name]))
+          (setStandardOutput raw-bytes)
+          (run)
+          ))
+    ; restore the original file
+    (-> bak-file (.renameTo root-file))
+    ; clean up the output
+    (-> (.toString raw-bytes)
+        (.trim)
+        (str/split (re-pattern File/pathSeparator)))
+    ))
  
+(defn gradle-subprojects
+  [& args]
+  (map
+    #(.getProjectDirectory %)
+    (.getChildren (apply gradle-project args))))
 
 (defn get-dependencies 
   "List dependency files for an EclipseProject"
