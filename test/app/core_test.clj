@@ -12,11 +12,12 @@
     (is (= ["test/app/src"] (detect-source-dirs "test/app"))))
 
   (testing "detect-environment"
-    (let [[cp sp unit] (detect-environment foo-java)
+    (let [[cp sp unit root] (detect-environment foo-java)
           expected "test/app/src/"]
       (is (not-empty cp))
-      (is (= (str (take-last (.length expected) (first sp)) expected)))
+      (is (= (apply str (take-last (.length expected) (first sp))) expected))
       (is (= unit "Foo"))
+      (is (= (apply str (take-last 8 root)) "test/app"))
       ))
 
   (testing "read-ast works"

@@ -2,7 +2,9 @@
   (import (org.eclipse.jdt.core.dom AST ASTParser ASTNode IBinding Modifier)
           (org.eclipse.jdt.core JavaCore)
           (java.io File))
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [clojure.java.io :refer [file]]
+             ))
 
 (def type-method "m")
 (def type-var "v")
@@ -17,7 +19,7 @@
 
 (def java-source-dir-candidates
   "Places to look for src files in a project root"
-  ["/src" "/src/main/java" "/src/debug/java"])
+  ["src" "src/main/java" "src/debug/java"])
 
 (defn detect-java-core
   "Attempt to locate java core jar.
@@ -40,14 +42,32 @@
         root-parts (take src-index parts)]
     (str/join File/separator root-parts)))
 
+(defn detect-depended-projects
+  "Given a project root, return possible roots
+  for other project roots it depends on"
+  [project-root]
+  (let [props-file (file project-root "project.properties")]
+    (when (.exists props-file)
+      ; process an android project.properties
+      (->> props-file
+           (slurp)
+           (str/split-lines)
+           (filter #(.startsWith % "android.library"))
+           (map #(second (str/split % #"=")))
+           (map #(file project-root %))))))
+
 (defn detect-source-dirs
   "Given a project root, return possible source dirs"
   [project-root]
-  (let [found (filter #(.exists (File. %))
-                      (map #(str project-root %) 
-                           java-source-dir-candidates))
-        search []] ; TODO find any ref'd projects w/source
-    (concat found (map detect-source-dirs search)))) ; recurse
+  (let [found (->> java-source-dir-candidates
+                   (map #(file project-root %))
+                   (filter #(.exists %)))
+        search (detect-depended-projects project-root)] 
+    (->> found
+         (concat (map detect-source-dirs search)) ; recurse
+         (flatten)
+         (distinct)
+         (map str))))
 
 (defn detect-environment
   "Detect the classpath and sourcepath
@@ -59,7 +79,8 @@
         srcs (detect-source-dirs root)]
     [(concat (detect-java-core)) ; TODO add other jars
      (map #(str % File/separator) srcs)
-     (str/join (drop-last 5 unit))]))
+     (str/join (drop-last 5 unit))
+     root]))
 
 (defn create-ast
   "Create AST from args:
@@ -75,7 +96,7 @@
   [& {:keys [text path with]
       :or {with :jdk7}}]
   (let [parser (ASTParser/newParser(AST/JLS4))
-        [cp sp unit] (detect-environment path)
+        [cp sp unit root] (detect-environment path)
         acp (into-array java.lang.String cp)
         asp (into-array java.lang.String sp)
         opts (JavaCore/getOptions)]
@@ -324,27 +345,5 @@
   (def foo (read-ast src-path))
 
   (detect-environment src-path)
-
-  ;; (def foo (create-ast : :text
-  ;;            (apply str 
-  ;;                   (interpose "\r" 
-  ;;                              ["class Foo {"
-  ;;                               "  void bar() {"
-  ;;                               "    Magic m = new Magic();"
-  ;;                               "    int i = 1;"
-  ;;                               "    m.get().fo"
-  ;;                               "  }"
-  ;;                               "  void foo() {"
-  ;;                               "     //nop"
-  ;;                               "  }"
-  ;;                               "}"]))))
-
-  (.getName (.getParent (find-node foo 5, 13)))
-
-  (.statements (.getBody (first (.getMethods (first (.types foo))))))
-
-  (map #(println (.getLineNumber foo (.getStartPosition %)) (.getMessage %)) (.getMessages foo))
-
-  ;; (org.eclipse.jdt.core.JavaCore/getOptions)
 
   )
