@@ -3,24 +3,31 @@
           (org.gradle.tooling.model GradleProject)
           (org.gradle.tooling.model.eclipse EclipseProject)
           (org.gradle.tooling.model.idea IdeaProject)
-          (java.io File)))
+          (java.net URI))
+  (:require [clojure.java.io :refer [file]]))
 
-(defn wrapper []
+(defn- gradle-connection
+  [& {:keys [project version installation home distro]}]
+  {:pre [(count project)]}
 
-  (def ape-minus (.. GradleConnector 
-                     (newConnector)
-                     (forProjectDirectory (File. "/Users/dhleong/git/ape-minus/"))
-                     (connect)))
+  (let [conn (.. GradleConnector
+                 (newConnector)
+                 (forProjectDirectory (file project)))]
+    (when installation
+      (.useInstallation conn (file installation)))
+    (when version
+      (.useGradleVersion conn version))
+    (when distro
+      (.useDistribution conn (URI. distro)))
+    (when home
+      (.useGradleUserHomeDir conn (file home)))
+    (.connect conn)))
 
-  (def ape-minus-proj (.getModel ape-minus GradleProject))
-  (def ape-minus-eclipse (.getModel ape-minus EclipseProject))
-  
-(let [
-      kids (-> ape-minus-proj .getChildren)
-      ]
-  (println (-> ape-minus-proj .getBuildScript .getSourceFile))
-  (map #(-> % .getBuildScript .getSourceFile) kids))
-
-  (map identity (.getClasspath ape-minus-eclipse))
-
-)
+(defn gradle-project
+  "Load an EclipseProject instance from Gradle"
+  [& args]
+  (let [proj-conn (apply gradle-connection args)]
+    (try
+      (.getModel proj-conn EclipseProject)
+      (finally (.close proj-conn))
+      )))
