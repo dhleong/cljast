@@ -42,7 +42,7 @@
          ~(cons 'do body)
          (finally (.close ~var-name))))))
 
-(defn gradle-project
+(defn project
   "Load an EclipseProject instance from Gradle"
   [& args]
   (with-gradle args
@@ -79,7 +79,7 @@
                         :version (last (str/split version #" -> "))
                         }))))))))
 
-(defn gradle-classpath
+(defn classpath
   "Moar wackiness. Backup the default build.gradle and
   append an extra task that dumps the classpath, then
   parse the output of that task."
@@ -112,11 +112,11 @@
         (str/split (re-pattern File/pathSeparator)))
     ))
  
-(defn gradle-subprojects
+(defn subprojects
   [& args]
   (map
     #(.getProjectDirectory %)
-    (.getChildren (apply gradle-project args))))
+    (.getChildren (apply project args))))
 
 (defn get-dependencies 
   "List dependency files for an EclipseProject"

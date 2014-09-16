@@ -1,7 +1,7 @@
 (ns app.gradle-test
   (import (org.eclipse.jdt.core.dom AST ASTNode))
   (:require [clojure.test :refer :all]
-            [app.gradle :refer :all]
+            [app.gradle :as gradle]
             [clojure.java.io :refer [file]]
             ))
 
@@ -12,15 +12,15 @@
 (deftest gradle-project-test
   (testing "classpath"
     (is (not-empty (->> gradle-proj-dir
-                        (gradle-project)
-                        (get-dependencies)
+                        (gradle/project)
+                        (gradle/get-dependencies)
                         )))))
 
-;; (deftest android-project-test
-;;   (testing "classpath"
-;;     (is (nil? (->> android-proj-dir
-;;                         (gradle-project)
-;;                         (get-dependencies)
-;;                         )))))
+(deftest android-project-test
+  (testing "classpath"
+    (let [cp (gradle/classpath android-proj-dir)]
+      (is (not-empty cp))
+      (is (.exists (file (first cp))))
+      )))
 
 ;; (clojure.test/run-tests)
