@@ -7,8 +7,8 @@
   (:require [clojure.java.io :refer [file]]))
 
 (defn- gradle-connection
-  [& {:keys [project version installation home distro]}]
-  {:pre [(count project)]}
+  [project & {:keys [version installation home distro]}]
+  {:pre [(not (nil? project))]}
 
   (let [conn (.. GradleConnector
                  (newConnector)
@@ -31,3 +31,8 @@
       (.getModel proj-conn EclipseProject)
       (finally (.close proj-conn))
       )))
+
+(defn get-dependencies 
+  "List dependency files for an EclipseProject"
+  [proj]
+  (map #(.getFile %) (.getClasspath proj)))
