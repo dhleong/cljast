@@ -4,7 +4,7 @@
           (java.io File))
   (:require [clojure.string :as str]
             [clojure.java.io :refer [file]]
-             ))
+            [cljast.gradle :as gradle]))
 
 (def type-method "m")
 (def type-var "v")
@@ -39,6 +39,20 @@
         [(.getAbsolutePath java-home-jar)]
       (.exists (File. osx-java-core))
         [osx-java-core])))
+
+(defn detect-gradle-jars
+  "Attempt to locate jar dependencies from a gradle project"
+  [root-dir]
+  (let [gradle-file (file root-dir "build.gradle")]
+    (if (.exists gradle-file)
+      (if (= -1 (-> (slurp gradle-file) (.indexOf "android")))
+        ; not an android project; use the normal way
+        (->> root-dir
+             (gradle/project)
+             (gradle/get-dependencies))
+        ; android project... use the wacky fallback
+        (gradle/classpath root-dir)))
+    [])) ;; nothing 
 
 (defn detect-project-root
   "Detect project root given a File"
@@ -81,11 +95,11 @@
   "Detect the classpath and sourcepath
   for a given file"
   [path]
-  (let [file (File. path)
-        unit (.getName file)
-        root (detect-project-root file)
+  (let [fpath (file path)
+        unit (.getName fpath)
+        root (detect-project-root fpath)
         srcs (detect-source-dirs root)]
-    [(concat (detect-java-core)) ; TODO add other jars
+    [(concat (detect-java-core) (detect-gradle-jars root)) ; TODO add other jars
      (map #(str % File/separator) srcs)
      (str/join (drop-last 5 unit))
      root]))
