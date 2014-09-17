@@ -16,11 +16,12 @@
                         (gradle/get-dependencies)
                         )))))
 
-(deftest android-project-test
-  (testing "classpath"
-    (let [cp (gradle/classpath android-proj-dir)]
-      (is (not-empty cp))
-      (is (.exists (file (first cp))))
-      )))
+(when (System/getenv "ANDROID_HOME")
+  (deftest android-project-test
+    (testing "classpath"
+      (let [cp (gradle/classpath android-proj-dir)]
+        (is (not-empty cp))
+        (is (.exists (file (first cp))))
+        ))))
 
 ;; (clojure.test/run-tests)
